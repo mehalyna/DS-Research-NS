@@ -1,0 +1,49 @@
+version: '3.9'  # The version of Docker Compose syntax we are using
+
+services:
+  # --- Service 1: The Database (PostgreSQL) ---
+  db:
+    image: postgres:15-alpine  # Downloads a lightweight version of Postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/  # Saves data so it doesn't vanish when you turn off the computer
+    environment:
+      - POSTGRES_DB=${SQL_DATABASE}  # Reads name from your .env file
+      - POSTGRES_USER=${SQL_USER}    # Reads user from your .env file
+      - POSTGRES_PASSWORD=${SQL_PASSWORD} # Reads password from your .env file
+    ports:
+      - "5432:5432"  # Opens port 5432 so your computer can see the database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SQL_USER} -d ${SQL_DATABASE}"]
+      interval: 10s
+      retries: 5
+
+  # --- Service 2: The Backend (Django) ---
+  backend:
+    build: ./backend  # Builds the Dockerfile located in the 'backend' folder
+    command: python manage.py runserver 0.0.0.0:8000 # The command to start Django
+    volumes:
+      - ./backend:/app  # "Mirrors" your local folder to the container. Changes you make save instantly.
+      - ./data:/app/data # Gives Django access to your raw CSV data
+    ports:
+      - "8000:8000"  # Opens port 8000 for the API
+    env_file:
+      - .env  # Loads your secrets
+    depends_on:
+      db:
+        condition: service_healthy  # Waits for the database to be ready before starting
+
+  # --- Service 3: The Frontend (Streamlit) ---
+  frontend:
+    build: ./frontend # Builds the Dockerfile located in the 'frontend' folder
+    command: streamlit run main.py --server.port 8501 --server.address 0.0.0.0
+    volumes:
+      - ./frontend:/app # Mirrors your code so you can edit live
+    ports:
+      - "8501:8501" # Opens port 8501 for the web interface
+    env_file:
+      - .env
+    depends_on:
+      - backend # Waits for backend to start
+
+volumes:
+  postgres_data: # Declares the data volume used by the database
