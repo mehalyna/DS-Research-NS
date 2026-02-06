@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    && apt-get purge -y --auto-remove gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file from your computer to the container

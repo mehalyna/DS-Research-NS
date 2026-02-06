@@ -1,3 +1,6 @@
 import streamlit as st
-st.title('Coffee & Health Analysis')
-st.write('Welcome to the dashboard!')
+try:
+    st.title('Coffee & Health Analysis')
+    st.write('Welcome to the dashboard!')
+except Exception as e:
+    st.error(f"An error occurred: {e}")
