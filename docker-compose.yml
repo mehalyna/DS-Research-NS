@@ -3,7 +3,7 @@ version: '3.9'  # The version of Docker Compose syntax we are using
 services:
   # --- Service 1: The Database (PostgreSQL) ---
   db:
-    image: postgres:15-alpine  # Downloads a lightweight version of Postgres
+    image: postgres:15  # Downloads a lightweight version of Postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data/  # Saves data so it doesn't vanish when you turn off the computer
     environment:
@@ -26,8 +26,17 @@ services:
       - ./data:/app/data # Gives Django access to your raw CSV data
     ports:
       - "8000:8000"  # Opens port 8000 for the API
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      #start_period: 30s
     env_file:
       - .env  # Loads your secrets
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - DEBUG=False
     depends_on:
       db:
         condition: service_healthy  # Waits for the database to be ready before starting
@@ -43,7 +52,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - backend # Waits for backend to start
-
+      backend:
+        condition: service_healthy
 volumes:
   postgres_data: # Declares the data volume used by the database
