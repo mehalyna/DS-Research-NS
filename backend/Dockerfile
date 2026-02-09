@@ -20,3 +20,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of your backend code
 COPY . .
+
+WORKDIR /app/src

@@ -22,7 +22,7 @@ services:
     build: ./backend  # Builds the Dockerfile located in the 'backend' folder
     command: python manage.py runserver 0.0.0.0:8000 # The command to start Django
     volumes:
-      - ./backend:/app  # "Mirrors" your local folder to the container. Changes you make save instantly.
+      - ./backend/src:/app/src  # "Mirrors" your local folder to the container. Changes you make save instantly.
       - ./data:/app/data # Gives Django access to your raw CSV data
     ports:
       - "8000:8000"  # Opens port 8000 for the API
@@ -46,7 +46,7 @@ services:
     build: ./frontend # Builds the Dockerfile located in the 'frontend' folder
     command: streamlit run main.py --server.port 8501 --server.address 0.0.0.0
     volumes:
-      - ./frontend:/app # Mirrors your code so you can edit live
+      - ./frontend/src:/app/src # Mirrors your code so you can edit live
     ports:
       - "8501:8501" # Opens port 8501 for the web interface
     env_file:
