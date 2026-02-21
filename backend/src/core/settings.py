@@ -38,6 +38,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # --- 3rd Party Libraries ---
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+
+    # --- Local Apps ---
+    'profiles',
+    'records',
+    'predictions',
 ]
 
 MIDDLEWARE = [
@@ -126,3 +136,22 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# --- REST FRAMEWORK CONFIGURATION ---
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated', # Lock everything by default!
+    ),
+}
+
+# --- JWT SETTINGS ---
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # User stays logged in for 1 hour
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),    # Can refresh login for 1 day
+}
+
+AUTH_USER_MODEL = 'profiles.User'
