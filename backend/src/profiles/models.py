@@ -2,10 +2,11 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class User(AbstractUser):
-    # We inherit everything from standard Django User (username, password, email)
-    # But now we can add custom fields easily!
+    email = models.EmailField(unique=True)
     
-    bio = models.TextField(blank=True, null=True)
-    
+    # Make email the main identifier instead of username
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
     def __str__(self):
-        return self.username
+        return self.email
