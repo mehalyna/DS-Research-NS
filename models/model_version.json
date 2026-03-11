@@ -1,0 +1,17 @@
+{
+    "version": "1.0.0",
+    "release_date": "2026-03-11",
+    "description": "Baseline multi-task LightGBM models.",
+    "preprocessing": "StandardScaler + OneHotEncoder + Age_Group/Caffeine_per_Cup features",
+    "metrics": {
+        "sleep_quality_f1": 0.9655,
+        "stress_level_f1": 0.9766,
+        "health_issues_f1": 0.9881
+    },
+    "artifacts": [
+        "preprocessor.joblib",
+        "baselines/lightgbm_sleep_quality_num.joblib",
+        "baselines/lightgbm_stress_level_num.joblib",
+        "baselines/lightgbm_health_issues_num.joblib"
+    ]
+}
