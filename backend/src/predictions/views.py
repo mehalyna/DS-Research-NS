@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .predictor import CoffeeHealthPredictor
+from .models import PredictionRecord
 
 # Initialize the predictor once when the server starts
 # (This prevents loading the heavy models every single time a request comes in)
@@ -31,6 +32,12 @@ def predict_state(request):
         
         # Run inference
         results = predictor.predict(user_data)
+        
+        PredictionRecord.objects.create(
+            id=results['prediction_id'],
+            user_data=user_data,
+            predictions=results['predictions']
+        )
         
         # Return the results as a clean JSON response
         return Response(results, status=status.HTTP_200_OK)

@@ -18,5 +18,4 @@ urlpatterns = [
 
     # --- The API Skeleton ---
     path('api/records/', include('records.urls')),         
-    path('api/predictions/', include('predictions.urls')), 
 ]
