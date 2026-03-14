@@ -7,6 +7,8 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    path('api/', include('predictions.urls')),
     
     # --- Authentication Endpoints ---
     path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -16,5 +18,4 @@ urlpatterns = [
 
     # --- The API Skeleton ---
     path('api/records/', include('records.urls')),         
-    path('api/predictions/', include('predictions.urls')), 
 ]

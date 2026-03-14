@@ -1,3 +1,43 @@
-from django.test import TestCase
+from rest_framework.test import APISimpleTestCase
+from rest_framework import status
+from django.urls import reverse
 
-# Create your tests here.
+class PredictionAPITests(APISimpleTestCase):
+    
+    def setUp(self):
+        # We use 'predict_state' because that is the 'name' we gave it in predictions/urls.py
+        self.url = reverse('predict_state')
+        self.valid_payload = {
+            "Age": 21,
+            "Gender": "Female",
+            "Country": "Ukraine",
+            "Coffee_Intake": 4,
+            "Caffeine_mg": 450,
+            "Sleep_Hours": 5.5,
+            "BMI": 21.5,
+            "Heart_Rate": 82,
+            "Physical_Activity_Hours": 2.0,
+            "Occupation": "Student",
+            "Smoking": "No",
+            "Alcohol_Consumption": "Yes"
+        }
+
+    def test_predict_state_success(self):
+        """Test that sending a valid payload returns a 200 OK and valid predictions."""
+        response = self.client.post(self.url, self.valid_payload, format='json')
+        
+        # Check that the request was successful
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Check that the response contains our expected keys
+        self.assertIn('prediction_id', response.data)
+        self.assertIn('predictions', response.data)
+        self.assertIn('sleep_quality', response.data['predictions'])
+
+    def test_predict_state_missing_data(self):
+        """Test that missing data is handled safely (doesn't crash with 200)."""
+        bad_payload = {"Age": 21}  # Missing almost everything
+        response = self.client.post(self.url, bad_payload, format='json')
+        
+        # Should return a 400 Bad Request or 500 Error, but definitely not 200 OK
+        self.assertNotEqual(response.status_code, status.HTTP_200_OK)

@@ -1,5 +1,6 @@
 from django.urls import path
+from . import views
 
 urlpatterns = [
-    # Future ML prediction endpoints will go here
+    path('predict/state/', views.predict_state, name='predict_state'),
 ]
