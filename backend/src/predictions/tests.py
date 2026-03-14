@@ -1,8 +1,8 @@
-from rest_framework.test import APISimpleTestCase
+from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 
-class PredictionAPITests(APISimpleTestCase):
+class PredictionAPITests(APITestCase):
     
     def setUp(self):
         # We use 'predict_state' because that is the 'name' we gave it in predictions/urls.py
@@ -41,3 +41,24 @@ class PredictionAPITests(APISimpleTestCase):
         
         # Should return a 400 Bad Request or 500 Error, but definitely not 200 OK
         self.assertNotEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_predict_cluster_success(self):
+        """Test that sending user stats returns a valid Coffee Persona."""
+        cluster_url = reverse('predict_cluster')
+        cluster_payload = {
+            "Age": 35,
+            "Coffee_Intake": 0.0,
+            "Caffeine_mg": 0.0,
+            "Sleep_Hours": 8.0,
+            "BMI": 22.0,
+            "Heart_Rate": 60,
+            "Physical_Activity_Hours": 8.0,
+            "Caffeine_per_Cup": 0.0
+        }
+        
+        response = self.client.post(cluster_url, cluster_payload, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('cluster_id', response.data)
+        self.assertIn('profile', response.data)
+        self.assertIn('name', response.data['profile'])

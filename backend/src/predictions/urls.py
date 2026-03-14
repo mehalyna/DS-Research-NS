@@ -1,6 +1,7 @@
 from django.urls import path
-from . import views
+from .views import predict_state, predict_cluster
 
 urlpatterns = [
-    path('predict/state/', views.predict_state, name='predict_state'),
+    path('predict/state/', predict_state, name='predict_state'),
+    path('cluster/', predict_cluster, name='predict_cluster'),
 ]
