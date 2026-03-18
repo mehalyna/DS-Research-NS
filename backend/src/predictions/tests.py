@@ -62,3 +62,40 @@ class PredictionAPITests(APITestCase):
         self.assertIn('cluster_id', response.data)
         self.assertIn('profile', response.data)
         self.assertIn('name', response.data['profile'])
+    
+    def test_predict_cluster_zero_coffee(self):
+        """Verify zero-coffee users get assigned to Cluster 1 (Decaf Abstainer)."""
+        cluster_url = reverse('predict_cluster')
+        payload = {
+            "Age": 25,
+            "Coffee_Intake": 0.0,
+            "Caffeine_mg": 0.0,
+            "Sleep_Hours": 8.0,
+            "BMI": 22.0,
+            "Heart_Rate": 60,
+            "Physical_Activity_Hours": 5.0
+        }
+        
+        response = self.client.post(cluster_url, payload, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['cluster_id'], 1)
+
+    def test_predict_cluster_invalid_input(self):
+        """Ensure the serializer catches negative values and missing fields."""
+        cluster_url = reverse('predict_cluster')
+        payload = {
+            "Age": -5, 
+            # Coffee_Intake is intentionally omitted to trigger a validation error
+            "Caffeine_mg": 100.0,
+            "Sleep_Hours": 7.0,
+            "BMI": 22.0,
+            "Heart_Rate": 70,
+            "Physical_Activity_Hours": 5.0
+        }
+        
+        response = self.client.post(cluster_url, payload, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Age', response.data)
+        self.assertIn('Coffee_Intake', response.data)

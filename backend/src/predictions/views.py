@@ -77,7 +77,31 @@ def predict_state(request):
 @permission_classes([AllowAny])
 def predict_cluster(request):
     """
-    Takes user state data and returns their Coffee Persona (Cluster).
+    Assign user to one of 3 Coffee Personas based on their habits.
+    
+    **Request Body:**
+    ```json
+    {
+        "Age": 25,
+        "Coffee_Intake": 3.0,
+        "Caffeine_mg": 285.0,
+        "Sleep_Hours": 7.0,
+        "BMI": 22.5,
+        "Heart_Rate": 70,
+        "Physical_Activity_Hours": 5.0
+    }
+    ```
+    
+    **Response:** 200 OK
+    ```json
+    {
+        "cluster_id": 2,
+        "profile": {
+            "name": "The Balanced Brewer",
+            "description": "Moderate coffee, well-rested, normal heart rate."
+        }
+    }
+    ```
     """
 
     if not cluster_scaler or not kmeans_model:
