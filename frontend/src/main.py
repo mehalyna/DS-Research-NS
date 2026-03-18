@@ -6,7 +6,7 @@ import os
 
 # --- Configurations ---
 st.set_page_config(page_title="Coffee Persona Analyzer", page_icon="☕", layout="wide")
-API_URL = "http://127.0.0.1:8000/api/cluster/"
+API_URL = os.getenv('API_URL', 'http://127.0.0.1:8000/api/cluster/')
 
 # --- Load Background Data for the Plot ---
 # We use st.cache_data so it only loads the CSV once to keep the app lightning fast!
@@ -38,7 +38,7 @@ with col1:
     heart_rate = st.slider("Resting Heart Rate", 40, 120, 70)
     activity = st.slider("Physical Activity (Hours/Week)", 0.0, 20.0, 5.0, 0.5)
 
-    analyze_button = st.button("🔮 Discover My Persona", use_container_width=True)
+    analyze_button = st.button("Discover My Persona", use_container_width=True)
 
 with col2:
     if analyze_button:
@@ -56,39 +56,48 @@ with col2:
         # 2. Call your new API!
         with st.spinner("Consulting the Sorting Hat..."):
             try:
-                response = requests.post(API_URL, json=payload)
+                # Added timeout=5 to prevent infinite hanging
+                response = requests.post(API_URL, json=payload, timeout=5)
                 
-                if response.status_code == 200:
-                    result = response.json()
-                    persona_name = result['profile']['name']
-                    persona_desc = result['profile']['description']
+                # This automatically raises an error if the status code is 4xx or 5xx
+                response.raise_for_status() 
+                
+                # If we get here, the response was a success (200 OK)
+                result = response.json()
+                persona_name = result['profile']['name']
+                persona_desc = result['profile']['description']
+                
+                st.success(f"### You are: **{persona_name}**")
+                st.write(f"*{persona_desc}*")
+                
+                # 3. Show the interactive scatter plot
+                if df is not None:
+                    st.subheader("Where you fit in:")
                     
-                    st.success(f"### You are: **{persona_name}**")
-                    st.write(f"*{persona_desc}*")
+                    # Map the raw cluster IDs to our human-readable Persona names
+                    persona_map = {
+                        0: "The High-Octane Chugger",
+                        1: "The Decaf Abstainer",
+                        2: "The Balanced Brewer"
+                    }
+                    df['Cluster_Label'] = df['Cluster'].map(persona_map)
                     
-                    # 3. Show the interactive scatter plot
-                    if df is not None:
-                        st.subheader("Where you fit in:")
-                        # Convert Cluster column to string so Plotly uses distinct colors instead of a gradient
-                        persona_map = {
-                            0: "The High-Octane Chugger",
-                            1: "The Decaf Abstainer",
-                            2: "The Balanced Brewer"
-                        }
-                        df['Cluster_Label'] = df['Cluster'].map(persona_map)
-                        
-                        fig = px.scatter(
-                            df, x='PCA1', y='PCA2', color='Cluster_Label',
-                            title="The Global Coffee Personas",
-                            labels={'PCA1': 'Metabolic & Sleep Axis', 'PCA2': 'Caffeine Volume Axis'},
-                            color_discrete_sequence=px.colors.qualitative.Vivid
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.warning("Cluster data file not found.")
-                        
+                    fig = px.scatter(
+                        df, x='PCA1', y='PCA2', color='Cluster_Label',
+                        title="The Global Coffee Personas",
+                        labels={'PCA1': 'Metabolic & Sleep Axis', 'PCA2': 'Caffeine Volume Axis'},
+                        color_discrete_sequence=px.colors.qualitative.Vivid
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.error(f"API Error: {response.status_code} - Make sure your Django server is running!")
+                    st.warning("Cluster data file not found. Ensure you saved the CSV in Week 8!")
                     
+            except requests.exceptions.Timeout:
+                st.error("Request timed out. Is the backend server running and responsive?")
             except requests.exceptions.ConnectionError:
-                st.error("Could not connect to the backend.")
+                st.error("Could not connect. Start backend with: `python manage.py runserver`")
+            except requests.exceptions.HTTPError as e:
+                # This catches the 400 Bad Request if the Serializer blocks bad data!
+                st.error(f"Server error: {e.response.status_code} - {e.response.text}")
+            except Exception as e:
+                st.error(f"An unexpected error occurred: {e}")
