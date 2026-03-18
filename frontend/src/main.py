@@ -32,7 +32,6 @@ with col1:
     age = st.number_input("Age", min_value=18, max_value=100, value=25)
     coffee_cups = st.slider("Coffee Cups per Day", 0.0, 10.0, 2.0, 0.5)
     caffeine_mg = coffee_cups * 95  # Estimate 95mg per standard cup
-    caffeine_per_cup = 95.0 if coffee_cups > 0 else 0.0
     
     sleep = st.slider("Sleep Hours", 2.0, 12.0, 7.0, 0.5)
     bmi = st.number_input("BMI", min_value=15.0, max_value=40.0, value=22.0)
@@ -51,8 +50,7 @@ with col2:
             "Sleep_Hours": sleep,
             "BMI": bmi,
             "Heart_Rate": heart_rate,
-            "Physical_Activity_Hours": activity,
-            "Caffeine_per_Cup": caffeine_per_cup
+            "Physical_Activity_Hours": activity
         }
         
         # 2. Call your new API!

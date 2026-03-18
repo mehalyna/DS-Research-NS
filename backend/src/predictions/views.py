@@ -1,13 +1,17 @@
 import joblib
 import os
-from django.conf import settings
 import pandas as pd
+from utils.feature_engineering import add_derived_features
+from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .predictor import CoffeeHealthPredictor
 from .models import PredictionRecord
+
+SCALER_PATH = os.path.join(settings.MODELS_DIR, 'clustering', 'cluster_scaler.joblib')
+KMEANS_PATH = os.path.join(settings.MODELS_DIR, 'clustering', 'kmeans_model.joblib')
 
 # Initialize the predictor once when the server starts
 # (This prevents loading the heavy models every single time a request comes in)
@@ -17,6 +21,15 @@ try:
 except Exception as e:
     print(f"❌ Failed to load ML Predictor: {e}")
     predictor = None
+
+try:
+    cluster_scaler = joblib.load(SCALER_PATH)
+    kmeans_model = joblib.load(KMEANS_PATH)
+    print("✓ Clustering models loaded successfully.")
+except Exception as e:
+    print(f"⚠️ Clustering models failed to load: {e}")
+    cluster_scaler = None
+    kmeans_model = None
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -57,21 +70,20 @@ def predict_state(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
-# Define paths to the models you just saved
-SCALER_PATH = os.path.join(settings.BASE_DIR, '../../models/clustering/cluster_scaler.joblib')
-KMEANS_PATH = os.path.join(settings.BASE_DIR, '../../models/clustering/kmeans_model.joblib')
-
-# Load them globally so they don't reload on every single request
-cluster_scaler = joblib.load(SCALER_PATH)
-kmeans_model = joblib.load(KMEANS_PATH)
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def predict_cluster(request):
     """
     Takes user state data and returns their Coffee Persona (Cluster).
     """
-    user_data = request.data
+
+    if not cluster_scaler or not kmeans_model:
+        return Response(
+            {"error": "Clustering models are currently unavailable."}, 
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+    
+    user_data = add_derived_features(request.data)
     
     # The exact 8 features we used in our Week 8 notebook, in the exact same order
     cluster_features = [
