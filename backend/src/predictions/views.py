@@ -4,12 +4,16 @@ import pandas as pd
 from utils.feature_engineering import add_derived_features
 from .serializers import ClusterInputSerializer
 from django.conf import settings
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .predictor import CoffeeHealthPredictor
 from .models import PredictionRecord
+
+class ClusterThrottle(AnonRateThrottle):
+    rate = '50/hour'
 
 SCALER_PATH = os.path.join(settings.MODELS_DIR, 'clustering', 'cluster_scaler.joblib')
 KMEANS_PATH = os.path.join(settings.MODELS_DIR, 'clustering', 'kmeans_model.joblib')
@@ -75,7 +79,8 @@ def predict_state(request):
     
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def predict_cluster(request):
+@throttle_classes([ClusterThrottle])
+def get_coffee_persona(request):
     """
     Assign user to one of 3 Coffee Personas based on their habits.
     

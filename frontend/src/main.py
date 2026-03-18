@@ -8,6 +8,8 @@ import os
 st.set_page_config(page_title="Coffee Persona Analyzer", page_icon="☕", layout="wide")
 API_URL = os.getenv('API_URL', 'http://127.0.0.1:8000/api/cluster/')
 
+CAFFEINE_PER_STANDARD_CUP = 95.0
+
 # --- Load Background Data for the Plot ---
 # We use st.cache_data so it only loads the CSV once to keep the app lightning fast!
 @st.cache_data
@@ -31,8 +33,7 @@ with col1:
     st.header("Your Stats")
     age = st.number_input("Age", min_value=18, max_value=100, value=25)
     coffee_cups = st.slider("Coffee Cups per Day", 0.0, 10.0, 2.0, 0.5)
-    caffeine_mg = coffee_cups * 95  # Estimate 95mg per standard cup
-    
+    caffeine_mg = coffee_cups * CAFFEINE_PER_STANDARD_CUP
     sleep = st.slider("Sleep Hours", 2.0, 12.0, 7.0, 0.5)
     bmi = st.number_input("BMI", min_value=15.0, max_value=40.0, value=22.0)
     heart_rate = st.slider("Resting Heart Rate", 40, 120, 70)
