@@ -84,9 +84,12 @@ with col2:
                     df['Cluster_Label'] = df['Cluster'].map(persona_map)
                     
                     fig = px.scatter(
-                        df, x='PCA1', y='PCA2', color='Cluster_Label',
+                        df, 
+                        x='UMAP1',           
+                        y='UMAP2',           
+                        color='Cluster_Label',
                         title="The Global Coffee Personas",
-                        labels={'PCA1': 'Metabolic & Sleep Axis', 'PCA2': 'Caffeine Volume Axis'},
+                        labels={'UMAP1': 'UMAP Dimension 1', 'UMAP2': 'UMAP Dimension 2'},
                         color_discrete_sequence=px.colors.qualitative.Vivid
                     )
                     st.plotly_chart(fig, use_container_width=True)
