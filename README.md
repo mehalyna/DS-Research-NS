@@ -42,6 +42,43 @@ This dataset enables exploration of several interesting questions:
 4. **Are there demographic differences in coffee consumption habits?**
 5. **What's the relationship between physical activity and health metrics?**
 
+## 🔌 API Documentation
+
+The backend provides RESTful endpoints to interact with the machine learning models. 
+
+### POST `/api/cluster/`
+Assigns a user to one of three Coffee Personas based on their physiological and behavioral habits using a K-Means clustering model.
+
+**Request Body (JSON):**
+```json
+{
+    "Age": 25,
+    "Coffee_Intake": 3.0,
+    "Caffeine_mg": 285.0,
+    "Sleep_Hours": 7.0,
+    "BMI": 22.5,
+    "Heart_Rate": 70,
+    "Physical_Activity_Hours": 5.0
+}
+```
+**Response (200 OK):**
+
+```json
+{
+    "cluster_id": 2,
+    "profile": {
+        "name": "The Balanced Brewer",
+        "description": "Moderate coffee, well-rested, normal heart rate."
+    }
+}
+```
+
+**Error Responses:**
+
+- 400 Bad Request: Invalid input data (e.g., negative age or missing fields).
+
+- 503 Service Unavailable: Machine learning models are currently loading or unavailable.
+
 ## 🛠️ Tools and Files
 
 ### Visualization Scripts
