@@ -23,18 +23,18 @@ METADATA_PATH = os.path.join(settings.MODELS_DIR, 'clustering', 'cluster_metadat
 # (This prevents loading the heavy models every single time a request comes in)
 try:
     predictor = CoffeeHealthPredictor()
-    print("✓ ML Predictor loaded successfully into Django.")
+    print("ML Predictor loaded successfully into Django.")
 except Exception as e:
-    print(f"❌ Failed to load ML Predictor: {e}")
+    print(f"Failed to load ML Predictor: {e}")
     predictor = None
 
 try:
     cluster_scaler = joblib.load(SCALER_PATH)
     kmeans_model = joblib.load(KMEANS_PATH)
     cluster_metadata = joblib.load(METADATA_PATH)
-    print("✓ Clustering models loaded successfully.")
+    print("Clustering models loaded successfully.")
 except Exception as e:
-    print(f"⚠️ Clustering models failed to load: {e}")
+    print(f"Clustering models failed to load: {e}")
     cluster_scaler = None
     kmeans_model = None
     cluster_metadata = None
@@ -156,3 +156,46 @@ def get_coffee_persona(request):
         
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def explain_prediction(request, prediction_id):
+    """
+    Returns SHAP explanations for a previously made prediction.
+    """
+    # 1. Fetch the user's original data from the database
+    try:
+        record = PredictionRecord.objects.get(id=prediction_id)
+    except PredictionRecord.DoesNotExist:
+        return Response(
+            {"error": "Prediction record not found."}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    if predictor is None:
+        return Response(
+            {"error": "Machine learning models are currently unavailable."}, 
+            status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+
+    try:
+        raw_user_data = record.input_data 
+
+        # 3. Generate explanations for all three models
+        explanations = {
+            "sleep_quality": predictor.generate_explanation('Sleep_Quality', raw_user_data),
+            "stress_level": predictor.generate_explanation('Stress_Level', raw_user_data),
+            "health_issues": predictor.generate_explanation('Health_Issues', raw_user_data)
+        }
+
+        # 4. Return the complete explanation payload
+        return Response({
+            "prediction_id": str(prediction_id),
+            "explanations": explanations
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response(
+            {"error": f"Failed to generate explanation: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

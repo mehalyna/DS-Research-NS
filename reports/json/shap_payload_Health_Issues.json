@@ -1,0 +1,33 @@
+{
+    "prediction_id": "poc-sample-Health_Issues-123",
+    "target_model": "Health_Issues",
+    "base_value": -1.9074,
+    "final_prediction": -5.1037,
+    "top_drivers": [
+        {
+            "feature": "Coffee_Intake",
+            "value": 3.3,
+            "shap_influence": -2.3924
+        },
+        {
+            "feature": "BMI",
+            "value": 26.5,
+            "shap_influence": -1.293
+        },
+        {
+            "feature": "Age",
+            "value": 48.0,
+            "shap_influence": -0.9851
+        },
+        {
+            "feature": "Caffeine_mg",
+            "value": 314.0,
+            "shap_influence": 0.9636
+        },
+        {
+            "feature": "Sleep_Hours",
+            "value": 7.5,
+            "shap_influence": 0.2625
+        }
+    ]
+}
