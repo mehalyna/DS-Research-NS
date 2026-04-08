@@ -1,0 +1,33 @@
+{
+    "prediction_id": "poc-sample-Stress_Level-123",
+    "target_model": "Stress_Level",
+    "base_value": -4.5343,
+    "final_prediction": -7.382,
+    "top_drivers": [
+        {
+            "feature": "Sleep_Hours",
+            "value": 7.5,
+            "shap_influence": -1.7453
+        },
+        {
+            "feature": "Coffee_Intake",
+            "value": 3.3,
+            "shap_influence": -0.9511
+        },
+        {
+            "feature": "Country_Mexico",
+            "value": 1.0,
+            "shap_influence": -0.3285
+        },
+        {
+            "feature": "Caffeine_per_Cup",
+            "value": 95.15,
+            "shap_influence": 0.2865
+        },
+        {
+            "feature": "Caffeine_mg",
+            "value": 314.0,
+            "shap_influence": 0.1435
+        }
+    ]
+}
