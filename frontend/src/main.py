@@ -9,6 +9,7 @@ st.set_page_config(page_title="Coffee Persona Analyzer", layout="wide")
 
 CLUSTER_API_URL = 'http://127.0.0.1:8000/api/cluster/'
 PREDICT_API_URL = 'http://127.0.0.1:8000/api/predict/state/'
+RECOMMEND_API_URL = 'http://127.0.0.1:8000/api/recommendation/'
 CAFFEINE_PER_STANDARD_CUP = 95.0
 
 @st.cache_data
@@ -191,6 +192,25 @@ with col2:
                     st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning("Cluster data file not found.")
+                
+                st.markdown("---")
+                st.subheader("Personal Health Recommendation")
+                
+                with st.spinner("Calculating optimal intake..."):
+                    rec_response = requests.post(RECOMMEND_API_URL, json=payload, timeout=5)
+                    if rec_response.status_code == 200:
+                        rec_data = rec_response.json()
+                        rec = rec_data['recommendation']
+                        
+                        col_rec1, col_rec2 = st.columns(2)
+                        with col_rec1:
+                            st.metric("Optimal Daily Intake", f"{rec['recommended_cups']} cups", f"{rec['delta']} cups")
+                        with col_rec2:
+                            st.info(f"**AI Advice:** {rec_data['reasoning']}")
+                        
+                        st.write(f"**Expected Impact:** Sleep: {rec['impact_sleep']} | Stress: {rec['impact_stress']}")
+                    else:
+                        st.warning("Recommendation engine currently unavailable.")
                     
             except Exception as e:
                 st.error(f"An unexpected error occurred: {e}")

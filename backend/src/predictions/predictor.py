@@ -176,3 +176,58 @@ class CoffeeHealthPredictor:
             "final_prediction": round(final_prediction, 4),
             "top_drivers": top_features
         }
+    
+    def get_recommendation(self, user_data: dict):
+        """
+        Simulates scenarios and returns the optimal coffee intake.
+        """
+        # 1. Generate Scenarios (0 to 5 cups)
+        cup_options = np.arange(0, 5.5, 0.5)
+        scenarios = []
+        for cups in cup_options:
+            s = user_data.copy()
+            s['Coffee_Intake'] = cups
+            s['Caffeine_mg'] = cups * 95.0
+            scenarios.append(s)
+        
+        df_scenarios = pd.DataFrame(scenarios)
+        
+        # 2. Engineering & Preprocessing
+        df_featured = self._engineer_features(df_scenarios)
+        X_processed = self.preprocessor.transform(df_featured)
+        
+        # 3. Predict Outcomes using the calibrated models
+        sleep_preds = self.models['Sleep_Quality'].predict(X_processed)
+        stress_preds = self.models['Stress_Level'].predict(X_processed)
+        health_preds = self.models['Health_Issues'].predict(X_processed)
+        
+        # 4. Scoring Logic (Matching your Week 13 Notebook)
+        utility_bonus = df_scenarios['Coffee_Intake'] * 0.15
+        scores = (sleep_preds - stress_preds - health_preds) + utility_bonus
+        
+        # 5. Safety Guardrails (Rule-based Fallback)
+        def is_safe(row):
+            if user_data['Heart_Rate'] > 100 and row['Coffee_Intake'] > 0.5:
+                return False
+            if row['Caffeine_mg'] > 400:
+                return False
+            return True
+
+        df_scenarios['health_score'] = scores
+        df_scenarios['is_safe'] = df_scenarios.apply(is_safe, axis=1)
+        
+        # 6. Find Best Safe Option
+        safe_df = df_scenarios[df_scenarios['is_safe']]
+        if safe_df.empty: return {"recommended_cups": 0.0, "delta": -user_data['Coffee_Intake']}
+        
+        best_idx = safe_df['health_score'].idxmax()
+        best_cups = safe_df.loc[best_idx, 'Coffee_Intake']
+        
+        return {
+            "recommended_cups": float(best_cups),
+            "original_intake": float(user_data['Coffee_Intake']),
+            "delta": float(best_cups - user_data['Coffee_Intake']),
+            # Logic for "expected effects"
+            "impact_sleep": "Improvement" if sleep_preds[best_idx] > sleep_preds[0] else "Stable",
+            "impact_stress": "Reduction" if stress_preds[best_idx] < stress_preds[0] else "Stable"
+        }
