@@ -12,7 +12,7 @@ class CoffeeHealthPredictor:
         """
         Loads the preprocessing pipeline, target encoder, and the three LightGBM models.
         """
-        # Navigate up from backend/src/predictions to the main DS-RESEARCH-NS folder
+
         if models_dir is None:
             project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
             self.models_dir = os.path.join(project_root, 'models')
@@ -22,12 +22,12 @@ class CoffeeHealthPredictor:
         # Load Preprocessor
         self.preprocessor = joblib.load(os.path.join(self.models_dir, 'preprocessor.joblib'))
         
-        # Load the 3 LightGBM Baseline Models
-        self.model_sleep = joblib.load(os.path.join(self.models_dir, 'baselines/lightgbm_Sleep_Quality_Num.joblib'))
-        self.model_stress = joblib.load(os.path.join(self.models_dir, 'baselines/lightgbm_Stress_Level_Num.joblib'))
-        self.model_health = joblib.load(os.path.join(self.models_dir, 'baselines/lightgbm_Health_Issues_Num.joblib'))
+        refined_path = os.path.join(self.models_dir, 'refined')
         
-        # Define target mapping for human-readable output
+        self.model_sleep = joblib.load(os.path.join(refined_path, 'lgbm_refined_Sleep_Quality_Num.joblib'))
+        self.model_stress = joblib.load(os.path.join(refined_path, 'lgbm_refined_Stress_Level_Num.joblib'))
+        self.model_health = joblib.load(os.path.join(refined_path, 'lgbm_refined_Health_Issues_Num.joblib'))
+
         self.sleep_map = {0: 'Poor', 1: 'Fair', 2: 'Good', 3: 'Excellent'}
         self.stress_map = {0: 'Low', 1: 'Medium', 2: 'High'}
         self.health_map = {0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Severe'}
@@ -37,10 +37,6 @@ class CoffeeHealthPredictor:
             'Stress_Level': self.model_stress,
             'Health_Issues': self.model_health
         }
-
-        self.explainers = {}
-        for target, model in self.models.items():
-            self.explainers[target] = shap.TreeExplainer(model)
 
     def _engineer_features(self, df):
         """Applies the exact same feature engineering from Week 4."""
@@ -109,7 +105,15 @@ class CoffeeHealthPredictor:
         Takes RAW user data, preprocesses it into the 44 expected columns, 
         generates SHAP values, and formats them into JSON.
         """
-        explainer = self.explainers.get(target_model)
+        calibrated_wrapper = self.models.get(target_model)
+        
+        if not calibrated_wrapper:
+             raise ValueError(f"Model {target_model} not found.")
+        
+        actual_model = calibrated_wrapper.calibrated_classifiers_[0].estimator
+
+        explainer = shap.TreeExplainer(actual_model)
+        
         if not explainer:
             raise ValueError(f"No cached explainer found for {target_model}")
 

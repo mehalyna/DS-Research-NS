@@ -179,7 +179,7 @@ def explain_prediction(request, prediction_id):
         )
 
     try:
-        raw_user_data = record.input_data 
+        raw_user_data = record.user_data 
 
         # 3. Generate explanations for all three models
         explanations = {
