@@ -5,16 +5,15 @@ import plotly.express as px
 import os
 
 # --- Configurations ---
-st.set_page_config(page_title="Coffee Persona Analyzer", page_icon="☕", layout="wide")
-API_URL = os.getenv('API_URL', 'http://127.0.0.1:8000/api/cluster/')
+st.set_page_config(page_title="Coffee Persona Analyzer", layout="wide")
 
+CLUSTER_API_URL = 'http://127.0.0.1:8000/api/cluster/'
+PREDICT_API_URL = 'http://127.0.0.1:8000/api/predict/state/'
+RECOMMEND_API_URL = 'http://127.0.0.1:8000/api/recommendation/'
 CAFFEINE_PER_STANDARD_CUP = 95.0
 
-# --- Load Background Data for the Plot ---
-# We use st.cache_data so it only loads the CSV once to keep the app lightning fast!
 @st.cache_data
 def load_cluster_data():
-    # Adjust path assuming you run this from the 'frontend' folder
     file_path = os.path.join(os.path.dirname(__file__), '../../data/processed/features_engineered_with_clusters.csv')
     if os.path.exists(file_path):
         return pd.read_csv(file_path)
@@ -22,86 +21,200 @@ def load_cluster_data():
 
 df = load_cluster_data()
 
-# --- User Interface ---
-st.title("☕ Coffee Persona Analyzer")
-st.markdown("Enter your daily habits below to discover your true Coffee Persona.")
+# --- Explanation Helper Functions ---
+def fetch_explanation(prediction_id):
+    url = f"http://127.0.0.1:8000/api/explain/{prediction_id}/" 
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception:
+        return None
 
-# Create a clean layout with columns
+def display_explanation_panel(prediction_id):
+    st.markdown("---")
+    st.subheader("Why did you get this prediction?")
+    st.write("Understand the key factors driving your health scores based on SHAP AI Analysis.")
+
+    with st.spinner("Generating SHAP explanations..."):
+        data = fetch_explanation(prediction_id)
+    
+    if not data or "explanations" not in data:
+        st.warning("Could not retrieve explanation data.")
+        return
+
+    explanations = data["explanations"]
+    tab1, tab2, tab3 = st.tabs(["Sleep Quality", "Stress Level", "Health Issues"])
+    
+    targets = [("sleep_quality", tab1), ("stress_level", tab2), ("health_issues", tab3)]
+    
+    def clean_text(text):
+        return text.replace("num__", "").replace("cat__", "").replace("_", " ")
+
+    for key, tab in targets:
+        with tab:
+            model_data = explanations.get(key, {})
+            drivers = model_data.get("top_drivers", [])
+            
+            if not drivers:
+                st.info("No significant drivers found.")
+                continue
+
+            colA, colB = st.columns([1, 1])
+            
+            with colA:
+                st.markdown("##### Key Drivers")
+                for driver in drivers:
+                    clean_name = clean_text(driver['feature']).title()
+                    clean_sentence = clean_text(driver['display_text'])
+                    
+                    if driver["impact"] == "positive":
+                        st.success(f"**{clean_name}**: {clean_sentence}")
+                    else:
+                        st.warning(f"**{clean_name}**: {clean_sentence}")
+            
+            with colB:
+                st.markdown("##### Visual Impact Breakdown")
+                chart_data = pd.DataFrame(drivers)
+                
+                # 1. Clean labels and convert numbers
+                chart_data["Feature"] = chart_data["feature"].apply(lambda x: clean_text(x).title())
+                chart_data["shap_influence"] = pd.to_numeric(chart_data["shap_influence"])
+                
+                # 2. Sort so the biggest impact is at the top
+                chart_data = chart_data.sort_values(by="shap_influence", ascending=True)
+                
+                # 3. Create a simple color list based on the values
+                # Red for positive, Blue for negative
+                colors = ['#ef553b' if x > 0 else '#636efa' for x in chart_data["shap_influence"]]
+                
+                # 4. Use a standard bar chart and pass the color list directly
+                fig = px.bar(
+                    chart_data, 
+                    x="shap_influence", 
+                    y="Feature", 
+                    orientation="h"
+                )
+                
+                # Update the traces to use our custom color list
+                fig.update_traces(marker_color=colors)
+                
+                # 5. Add a vertical zero-line and clean layout
+                fig.add_vline(x=0, line_width=2, line_color="white", opacity=0.5)
+                fig.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    xaxis_title="Impact on Score", 
+                    yaxis_title="",
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+# --- Main UI ---
+st.title("Coffee Persona Analyzer")
+st.markdown("Enter your daily habits below to discover your true Coffee Persona and get AI-powered health insights.")
+
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.header("Your Stats")
+    # Section 1: Biometrics
+    st.markdown("#### Core Biometrics")
     age = st.number_input("Age", min_value=18, max_value=100, value=25)
+    bmi = st.number_input("BMI", min_value=15.0, max_value=40.0, value=22.0)
+    heart_rate = st.slider("Resting Heart Rate", 40, 120, 70)
+    
+    # Section 2: Lifestyle & Habits
+    st.markdown("#### Lifestyle & Habits")
     coffee_cups = st.slider("Coffee Cups per Day", 0.0, 10.0, 2.0, 0.5)
     caffeine_mg = coffee_cups * CAFFEINE_PER_STANDARD_CUP
     sleep = st.slider("Sleep Hours", 2.0, 12.0, 7.0, 0.5)
-    bmi = st.number_input("BMI", min_value=15.0, max_value=40.0, value=22.0)
-    heart_rate = st.slider("Resting Heart Rate", 40, 120, 70)
     activity = st.slider("Physical Activity (Hours/Week)", 0.0, 20.0, 5.0, 0.5)
+    smoking = st.selectbox("Smoking", ["No", "Yes"])
+    alcohol = st.selectbox("Alcohol Consumption", ["No", "Yes"])
 
-    analyze_button = st.button("Discover My Persona", use_container_width=True)
+    # Section 3: Demographics
+    st.markdown("#### Demographics")
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    occupation = st.selectbox("Occupation", ["Other", "Service", "Office", "Student", "Healthcare"])
+    country = st.selectbox("Country", [
+        "Germany", "Brazil", "Spain", "Mexico", "France", "Canada", "UK", "Switzerland",
+        "Netherlands", "Italy", "China", "Japan", "Belgium", "Finland", "Australia",
+        "USA", "Sweden", "India", "Norway", "South Korea"
+    ])
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    analyze_button = st.button("Discover My Persona", use_container_width=True, type="primary")
 
 with col2:
     if analyze_button:
-        # 1. Package the data for Django
         payload = {
-            "Age": age,
-            "Coffee_Intake": coffee_cups,
-            "Caffeine_mg": caffeine_mg,
-            "Sleep_Hours": sleep,
-            "BMI": bmi,
-            "Heart_Rate": heart_rate,
-            "Physical_Activity_Hours": activity
+            "Age": age, "Coffee_Intake": coffee_cups, "Caffeine_mg": caffeine_mg,
+            "Sleep_Hours": sleep, "BMI": bmi, "Heart_Rate": heart_rate,
+            "Physical_Activity_Hours": activity, "Gender": gender, "Country": country,
+            "Occupation": occupation, "Alcohol_Consumption": alcohol, "Smoking": smoking
         }
         
-        # 2. Call your new API!
-        with st.spinner("Consulting the Sorting Hat..."):
+        with st.spinner("Consulting the ML models..."):
             try:
-                # Added timeout=5 to prevent infinite hanging
-                response = requests.post(API_URL, json=payload, timeout=5)
-                
-                # This automatically raises an error if the status code is 4xx or 5xx
+                # 1. Cluster Call
+                response = requests.post(CLUSTER_API_URL, json=payload, timeout=5)
                 response.raise_for_status() 
-                
-                # If we get here, the response was a success (200 OK)
                 result = response.json()
-                persona_name = result['profile']['name']
-                persona_desc = result['profile']['description']
                 
-                st.success(f"### You are: **{persona_name}**")
-                st.write(f"*{persona_desc}*")
+                st.success(f"### You are: **{result['profile']['name']}**")
+                st.write(f"*{result['profile']['description']}*")
                 
-                # 3. Show the interactive scatter plot
+                # 2. Predict Call
+                predict_response = requests.post(PREDICT_API_URL, json=payload, timeout=5)
+                if predict_response.status_code == 200:
+                    st.session_state['prediction_id'] = predict_response.json().get("prediction_id")
+                
+                # 3. Restored, beautiful Plotly Chart
                 if df is not None:
                     st.subheader("Where you fit in:")
                     
-                    # Map the raw cluster IDs to our human-readable Persona names
-                    persona_map = {
-                        0: "The High-Octane Chugger",
-                        1: "The Decaf Abstainer",
-                        2: "The Balanced Brewer"
-                    }
-                    df['Cluster_Label'] = df['Cluster'].map(persona_map)
-                    
+                    # Create a simple scatter plot with NO color mapping to avoid errors
                     fig = px.scatter(
                         df, 
-                        x='UMAP1',           
-                        y='UMAP2',           
-                        color='Cluster_Label',
-                        title="The Global Coffee Personas",
-                        labels={'UMAP1': 'UMAP Dimension 1', 'UMAP2': 'UMAP Dimension 2'},
-                        color_discrete_sequence=px.colors.qualitative.Vivid
+                        x='UMAP1', 
+                        y='UMAP2', 
+                        title="The Global Coffee Personas"
+                    )
+                    
+                    # Force all points to be the same professional blue color
+                    fig.update_traces(marker=dict(color='#636efa', size=5, opacity=0.6))
+                    
+                    fig.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        xaxis_title="Similarity Dimension 1",
+                        yaxis_title="Similarity Dimension 2"
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
-                    st.warning("Cluster data file not found. Ensure you saved the CSV in Week 8!")
+                    st.warning("Cluster data file not found.")
+                
+                st.markdown("---")
+                st.subheader("Personal Health Recommendation")
+                
+                with st.spinner("Calculating optimal intake..."):
+                    rec_response = requests.post(RECOMMEND_API_URL, json=payload, timeout=5)
+                    if rec_response.status_code == 200:
+                        rec_data = rec_response.json()
+                        rec = rec_data['recommendation']
+                        
+                        col_rec1, col_rec2 = st.columns(2)
+                        with col_rec1:
+                            st.metric("Optimal Daily Intake", f"{rec['recommended_cups']} cups", f"{rec['delta']} cups")
+                        with col_rec2:
+                            st.info(f"**AI Advice:** {rec_data['reasoning']}")
+                        
+                        st.write(f"**Expected Impact:** Sleep: {rec['impact_sleep']} | Stress: {rec['impact_stress']}")
+                    else:
+                        st.warning("Recommendation engine currently unavailable.")
                     
-            except requests.exceptions.Timeout:
-                st.error("Request timed out. Is the backend server running and responsive?")
-            except requests.exceptions.ConnectionError:
-                st.error("Could not connect. Start backend with: `python manage.py runserver`")
-            except requests.exceptions.HTTPError as e:
-                # This catches the 400 Bad Request if the Serializer blocks bad data!
-                st.error(f"Server error: {e.response.status_code} - {e.response.text}")
             except Exception as e:
                 st.error(f"An unexpected error occurred: {e}")
+
+# --- Render the Explanation Panel Full-Width at the Bottom ---
+if 'prediction_id' in st.session_state and st.session_state['prediction_id']:
+    display_explanation_panel(st.session_state['prediction_id'])

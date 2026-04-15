@@ -1,6 +1,7 @@
-from rest_framework.test import APITestCase
+from rest_framework.test import TestCase, APITestCase, Client
 from rest_framework import status
 from django.urls import reverse
+import json
 
 class PredictionAPITests(APITestCase):
     
@@ -99,3 +100,21 @@ class PredictionAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Age', response.data)
         self.assertIn('Coffee_Intake', response.data)
+
+class RecommendationTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse('recommendation')
+        self.valid_payload = {
+            "Age": 25, "Coffee_Intake": 3.0, "Caffeine_mg": 285.0,
+            "Sleep_Hours": 7.0, "BMI": 22.0, "Heart_Rate": 110, # Trigger safety!
+            "Physical_Activity_Hours": 5.0, "Gender": "Female", 
+            "Country": "Ukraine", "Occupation": "Student", 
+            "Alcohol_Consumption": "No", "Smoking": "No"
+        }
+
+    def test_safety_guardrails(self):
+        response = self.client.post(self.url, data=json.dumps(self.valid_payload), content_type='application/json')
+        data = response.json()
+        # With HR 110, it MUST recommend <= 0.5 cups
+        self.assertLessEqual(data['recommendation']['recommended_cups'], 0.5)

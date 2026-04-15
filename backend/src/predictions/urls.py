@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import predict_state, get_coffee_persona, explain_prediction
+from . import views
 
 urlpatterns = [
-    path('predict/state/', predict_state, name='predict_state'),
-    path('cluster/', get_coffee_persona, name='predict_cluster'),
-    path('explain/<uuid:prediction_id>/', explain_prediction, name='explain_prediction')
+    path('predict/state/', views.predict_state, name='predict_state'),
+    path('cluster/', views.get_coffee_persona, name='predict_cluster'),
+    path('explain/<uuid:prediction_id>/', views.explain_prediction, name='explain_prediction'),
+    path('recommendation/', views.recommendation_view, name='recommendation'),
 ]

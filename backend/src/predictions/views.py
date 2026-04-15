@@ -179,7 +179,7 @@ def explain_prediction(request, prediction_id):
         )
 
     try:
-        raw_user_data = record.input_data 
+        raw_user_data = record.user_data 
 
         # 3. Generate explanations for all three models
         explanations = {
@@ -199,3 +199,29 @@ def explain_prediction(request, prediction_id):
             {"error": f"Failed to generate explanation: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def recommendation_view(request):
+    """
+    POST /api/recommendation/
+    """
+    try:
+        user_data = request.data
+        predictor = CoffeeHealthPredictor()
+        result = predictor.get_recommendation(user_data)
+        
+        # Simple dynamic reasoning
+        if result['delta'] < 0:
+            msg = f"We suggest reducing your intake by {abs(result['delta'])} cups to optimize sleep and lower stress."
+        elif result['delta'] > 0:
+            msg = f"Based on your profile, you can safely increase intake by {result['delta']} cups."
+        else:
+            msg = "Your current intake is perfectly balanced for your health profile."
+            
+        return Response({
+            "recommendation": result,
+            "reasoning": msg
+        })
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
