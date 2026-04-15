@@ -207,10 +207,23 @@ class CoffeeHealthPredictor:
         
         # 5. Safety Guardrails (Rule-based Fallback)
         def is_safe(row):
+            # 1. Tachycardia Guard (Heart Rate > 100)
             if user_data['Heart_Rate'] > 100 and row['Coffee_Intake'] > 0.5:
                 return False
+            
+            # 2. FDA Cap (400mg)
             if row['Caffeine_mg'] > 400:
                 return False
+            
+            # 3. Age-based limit (Over 65 should be cautious)
+            if user_data['Age'] > 65 and row['Coffee_Intake'] > 2.5:
+                return False
+
+            # 4. Sleep Deprivation Guard
+            # If user sleeps < 5 hours, don't recommend increasing caffeine
+            if user_data['Sleep_Hours'] < 5.0 and row['Coffee_Intake'] > user_data['Coffee_Intake']:
+                return False
+
             return True
 
         df_scenarios['health_score'] = scores
