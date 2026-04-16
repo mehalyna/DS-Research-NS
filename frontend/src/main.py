@@ -214,6 +214,17 @@ with col2:
                     
             except Exception as e:
                 st.error(f"An unexpected error occurred: {e}")
+        
+        with st.spinner("Checking safety bounds..."):
+            anomaly_res = requests.post("http://127.0.0.1:8000/api/anomalies/", json=payload)
+            if anomaly_res.status_code == 200 and anomaly_res.json().get('is_anomaly'):
+                st.error("Physiological Outlier Detected")
+                st.warning("""
+                    Your combined biometrics (Heart Rate, BMI, and Intake) fall outside of typical training ranges. 
+                    The following health predictions and recommendations should be treated with extreme caution.
+                    Your data pattern is highly unusual.
+                    We recommend manually checking your resting heart rate and consulting a healthcare provider before increasing caffeine intake.
+                """)
 
 # --- Render the Explanation Panel Full-Width at the Bottom ---
 if 'prediction_id' in st.session_state and st.session_state['prediction_id']:

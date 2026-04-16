@@ -38,6 +38,13 @@ class CoffeeHealthPredictor:
             'Health_Issues': self.model_health
         }
 
+        # Load Anomaly Detector
+        anomaly_path = os.path.join(self.models_dir, 'anomaly', 'iso_forest_v1.joblib')
+        self.anomaly_detector = joblib.load(anomaly_path)
+        
+        # Features used during training
+        self.risk_features = ['Age', 'BMI', 'Heart_Rate', 'Coffee_Intake', 'Sleep_Hours']
+
     def _engineer_features(self, df):
         """Applies the exact same feature engineering from Week 4."""
         df_eng = df.copy()
@@ -244,3 +251,12 @@ class CoffeeHealthPredictor:
             "impact_sleep": "Improvement" if sleep_preds[best_idx] > sleep_preds[0] else "Stable",
             "impact_stress": "Reduction" if stress_preds[best_idx] < stress_preds[0] else "Stable"
         }
+    
+    def detect_anomaly(self, user_data: dict):
+        """Returns True if the input pattern is a risky outlier."""
+        # Create DF with only the 5 risk features
+        df_risk = pd.DataFrame([user_data])[self.risk_features]
+        
+        # Predict returns 1 (normal) or -1 (anomaly)
+        prediction = self.anomaly_detector.predict(df_risk)[0]
+        return True if prediction == -1 else False

@@ -6,4 +6,5 @@ urlpatterns = [
     path('cluster/', views.get_coffee_persona, name='predict_cluster'),
     path('explain/<uuid:prediction_id>/', views.explain_prediction, name='explain_prediction'),
     path('recommendation/', views.recommendation_view, name='recommendation'),
+    path('anomalies/', views.check_anomaly_view, name='check-anomaly'),
 ]

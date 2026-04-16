@@ -225,3 +225,21 @@ def recommendation_view(request):
         })
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def check_anomaly_view(request):
+    """
+    POST /api/anomalies/
+    Returns whether the current input is a statistical outlier.
+    """
+    try:
+        predictor = CoffeeHealthPredictor()
+        is_anomaly = predictor.detect_anomaly(request.data)
+        
+        return Response({
+            "is_anomaly": is_anomaly,
+            "message": "High-risk physiological pattern detected" if is_anomaly else "Normal pattern"
+        })
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
