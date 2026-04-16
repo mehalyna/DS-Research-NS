@@ -1,9 +1,16 @@
 {
-    "version": "1.1.0",
+    "version": "1.2.0",
+    "last_update": "2026-04-16",
+    "active_models": {
+        "classifier": "LGBM_Refined_v1.1",
+        "anomaly_detector": "IsolationForest_v1.0",
+        "recommender": "S-Learner_Simulation_POC"
+    },
     "metrics": {
-        "Sleep": 0.96,
-        "Stress": 0.97,
-        "Health": 0.98
+        "Sleep_Quality_F1": 0.96,
+        "Stress_Level_F1": 0.97,
+        "Health_Issues_F1": 0.98,
+        "anomaly_contamination": 0.03
     },
     "calibration": "Platt Scaling Applied"
 }

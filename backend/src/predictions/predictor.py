@@ -1,11 +1,15 @@
 import os
 import joblib
 import json
+import logging
 import uuid
 import shap
 import numpy as np
 import pandas as pd
 from datetime import datetime
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class CoffeeHealthPredictor:
     def __init__(self, models_dir=None):
@@ -44,6 +48,17 @@ class CoffeeHealthPredictor:
         
         # Features used during training
         self.risk_features = ['Age', 'BMI', 'Heart_Rate', 'Coffee_Intake', 'Sleep_Hours']
+    
+    def _log_event(self, event_type, data, result):
+        """Internal helper to track system behavior for the integration pass."""
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "event": event_type,
+            "input_cups": data.get('Coffee_Intake'),
+            "is_anomaly": result.get('is_anomaly', False) if isinstance(result, dict) else "N/A",
+            "recommendation": result.get('recommended_cups', "N/A") if isinstance(result, dict) else "N/A"
+        }
+        logger.info(f"COFFEE_AI_LOG: {log_entry}")
 
     def _engineer_features(self, df):
         """Applies the exact same feature engineering from Week 4."""
@@ -88,7 +103,7 @@ class CoffeeHealthPredictor:
         # 5. Format the Output
         prediction_id = str(uuid.uuid4())
         
-        return {
+        output = {
             "prediction_id": prediction_id,
             "timestamp": datetime.now().isoformat(),
             "predictions": {
@@ -106,6 +121,9 @@ class CoffeeHealthPredictor:
                 }
             }
         }
+
+        self._log_event("prediction_made", user_data, output)
+        return output
     
     def generate_explanation(self, target_model: str, user_data: dict):
         """
@@ -243,7 +261,7 @@ class CoffeeHealthPredictor:
         best_idx = safe_df['health_score'].idxmax()
         best_cups = safe_df.loc[best_idx, 'Coffee_Intake']
         
-        return {
+        output = {
             "recommended_cups": float(best_cups),
             "original_intake": float(user_data['Coffee_Intake']),
             "delta": float(best_cups - user_data['Coffee_Intake']),
@@ -251,6 +269,9 @@ class CoffeeHealthPredictor:
             "impact_sleep": "Improvement" if sleep_preds[best_idx] > sleep_preds[0] else "Stable",
             "impact_stress": "Reduction" if stress_preds[best_idx] < stress_preds[0] else "Stable"
         }
+
+        self._log_event("recommendation_generated", user_data, output)
+        return output
     
     def detect_anomaly(self, user_data: dict):
         """Returns True if the input pattern is a risky outlier."""
