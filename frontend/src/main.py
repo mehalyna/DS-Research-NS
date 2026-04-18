@@ -108,7 +108,7 @@ def display_explanation_panel(prediction_id):
                     yaxis_title="",
                     showlegend=False
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
 # --- Main UI ---
 st.title("Coffee Persona Analyzer")
@@ -143,7 +143,7 @@ with col1:
     ])
 
     st.markdown("<br>", unsafe_allow_html=True)
-    analyze_button = st.button("Discover My Persona", use_container_width=True, type="primary")
+    analyze_button = st.button("Discover My Persona", width='stretch', type="primary")
 
 with col2:
     if analyze_button:
@@ -200,7 +200,7 @@ with col2:
                         xaxis_title="Similarity Dimension 1",
                         yaxis_title="Similarity Dimension 2"
                     )
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                 else:
                     st.warning("Cluster data file not found.")
                 
@@ -212,14 +212,26 @@ with col2:
                     if rec_response.status_code == 200:
                         rec_data = rec_response.json()
                         rec = rec_data['recommendation']
+    
+                        # Use columns to make it look professional
+                        col_met1, col_met2, col_met3 = st.columns(3)
                         
-                        col_rec1, col_rec2 = st.columns(2)
-                        with col_rec1:
-                            st.metric("Optimal Daily Intake", f"{rec['recommended_cups']} cups", f"{rec['delta']} cups")
-                        with col_rec2:
-                            st.info(f"**AI Advice:** {rec_data['reasoning']}")
+                        with col_met1:
+                            st.metric("Recommended", f"{rec['recommended_cups']} cups", f"{rec['delta']} cups")
                         
-                        st.write(f"**Expected Impact:** Sleep: {rec['impact_sleep']} | Stress: {rec['impact_stress']}")
+                        with col_met2:
+                            # Show the Stress Reduction % we calculated
+                            reduction = rec.get('stress_reduction_pct', 0)
+                            st.metric("Stress Risk Reduction", f"-{reduction}%", delta_color="normal")
+                            
+                        with col_met3:
+                            # Show the Sleep Impact
+                            sleep_status = rec.get('impact_sleep', 'Stable')
+                            st.metric("Sleep Quality", sleep_status)
+
+                        # Display the dynamic "Human-Speak" reasoning we just perfected
+                        st.info(f"**AI Health Insight:** {rec.get('reasoning', 'No specific insight available.')}")
+                        
                     else:
                         st.warning("Recommendation engine currently unavailable.")
                     

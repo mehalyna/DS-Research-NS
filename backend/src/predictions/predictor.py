@@ -166,39 +166,40 @@ class CoffeeHealthPredictor:
             
         user_data_array = shap_explanation.data[0]
 
-        # 4. Format into JSON-ready dictionary
-        feature_impacts = []
-        all_shap_sum = 0.0
+        translation_map = {
+            "num__Age": "As we age, the liver processes caffeine more slowly, which can extend its stimulating effects into the night.",
+            "num__Heart_Rate": "A higher resting heart rate indicates your cardiovascular system is already under load; caffeine acts as an additional stimulant.",
+            "num__Sleep_Hours": "Quality sleep is the only way for the brain to recover; caffeine can mask exhaustion but cannot replace restorative rest.",
+            "num__BMI": "Body composition affects how caffeine is distributed and metabolized throughout your system.",
+            "num__Coffee_Intake": "Your current daily consumption sets the baseline for your body's caffeine tolerance and dependency.",
+            "num__Physical_Activity_Hours": "Exercise provides a 'stress buffer' that helps your body process caffeine more effectively without the jitters.",
+            "cat__Smoking_Yes": "Smoking can accelerate caffeine metabolism, often leading to a cycle of higher consumption and lower sleep quality.",
+            "cat__Occupation_Student": "Students often face irregular schedules, making them more susceptible to caffeine-induced sleep disruption."
+        }
 
+        # Format into JSON-ready dictionary 
+        feature_impacts = []
         for i, feature_name in enumerate(user_features_df.columns):
             shap_val = float(user_shap_values[i])
-            feat_val = float(user_data_array[i])
-            all_shap_sum += shap_val
             
             if abs(shap_val) < 0.001:
                 continue
+            
+            # Use the map to get a human explanation, or fallback to generic
+            explanation = translation_map.get(feature_name, f"This factor is a key driver for your {target_model.replace('_', ' ')}.")
                 
             feature_impacts.append({
-                "feature": feature_name,
-                "value": round(feat_val, 2),
-                "shap_influence": round(shap_val, 4)
+                "feature": feature_name.split('__')[-1].replace('_', ' '),
+                "shap_influence": round(shap_val, 4),
+                "impact": "positive" if shap_val > 0 else "negative",
+                "display_text": explanation # This is what your Streamlit UI will now show
             })
 
         feature_impacts.sort(key=lambda x: abs(x["shap_influence"]), reverse=True)
         top_features = feature_impacts[:5]
 
-        for item in top_features:
-            influence = item["shap_influence"]
-            item["impact"] = "positive" if influence > 0 else "negative"
-            direction = "increased" if influence > 0 else "decreased"
-            item["display_text"] = f"Your {item['feature']} value of {item['value']} {direction} your score."
-
-        final_prediction = base_value + all_shap_sum
-
         return {
-            "target_model": target_model,
-            "base_value": round(base_value, 4),
-            "final_prediction": round(final_prediction, 4),
+            "target_model": target_model.replace('_', ' '),
             "top_drivers": top_features
         }
     
@@ -225,6 +226,9 @@ class CoffeeHealthPredictor:
         sleep_preds = self.models['Sleep_Quality'].predict(X_processed)
         stress_preds = self.models['Stress_Level'].predict(X_processed)
         health_preds = self.models['Health_Issues'].predict(X_processed)
+
+        sleep_probs = self.models['Sleep_Quality'].predict_proba(X_processed)
+        stress_probs = self.models['Stress_Level'].predict_proba(X_processed)
         
         # 4. Scoring Logic (Matching your Week 13 Notebook)
         utility_bonus = df_scenarios['Coffee_Intake'] * 0.15
@@ -232,42 +236,79 @@ class CoffeeHealthPredictor:
         
         # 5. Safety Guardrails (Rule-based Fallback)
         def is_safe(row):
-            # 1. Tachycardia Guard (Heart Rate > 100)
-            if user_data['Heart_Rate'] > 100 and row['Coffee_Intake'] > 0.5:
+            # 1. Tachycardia & Absolute FDA Cap
+            if user_data['Heart_Rate'] > 105 and row['Coffee_Intake'] > 0.5:
                 return False
-            
-            # 2. FDA Cap (400mg)
             if row['Caffeine_mg'] > 400:
                 return False
             
-            # 3. Age-based limit (Over 65 should be cautious)
-            if user_data['Age'] > 65 and row['Coffee_Intake'] > 2.5:
+            # 2. The "Nudge" Constraint: Prevent overwhelming the user
+            # Don't suggest increasing by more than 1.5 cups from current baseline
+            if row['Coffee_Intake'] > (user_data['Coffee_Intake'] + 1.5):
+                return False
+            # Don't suggest decreasing by more than 2.0 cups (avoid heavy withdrawal)
+            if row['Coffee_Intake'] < (user_data['Coffee_Intake'] - 2.0):
+                return False
+
+            # 3. Contextual Risk Multipliers (Smoking, Age, BMI)
+            risk_factors = 0
+            if user_data['Smoking'] == 'Yes': risk_factors += 1
+            if user_data['BMI'] > 30: risk_factors += 1
+            if user_data['Age'] > 60: risk_factors += 1
+            
+            # If 2+ risks are present, strictly cap at 2.0 cups regardless of model score
+            if risk_factors >= 2 and row['Coffee_Intake'] > 2.0:
                 return False
 
             # 4. Sleep Deprivation Guard
-            # If user sleeps < 5 hours, don't recommend increasing caffeine
-            if user_data['Sleep_Hours'] < 5.0 and row['Coffee_Intake'] > user_data['Coffee_Intake']:
+            # If current sleep is very poor, we never recommend an increase
+            if user_data['Sleep_Hours'] < 5.5 and row['Coffee_Intake'] > user_data['Coffee_Intake']:
                 return False
 
             return True
-
-        df_scenarios['health_score'] = scores
+        
         df_scenarios['is_safe'] = df_scenarios.apply(is_safe, axis=1)
-        
-        # 6. Find Best Safe Option
         safe_df = df_scenarios[df_scenarios['is_safe']]
-        if safe_df.empty: return {"recommended_cups": 0.0, "delta": -user_data['Coffee_Intake']}
         
-        best_idx = safe_df['health_score'].idxmax()
-        best_cups = safe_df.loc[best_idx, 'Coffee_Intake']
+        # If no scenario is safe, provide a strict emergency recommendation
+        if safe_df.empty:
+            return {
+                "recommended_cups": 0.0, 
+                "delta": round(float(-user_data['Coffee_Intake']), 1), 
+                "impact_sleep": "Critical",
+                "impact_stress": "High Risk",
+                "stress_reduction_pct": 0.0,
+                "reasoning": "Your current physiological markers (Sleep/Heart Rate) indicate extreme strain. No additional caffeine is safely recommended."
+            }
+        
+        # Calculate indices for safe scenarios to match probability arrays
+        safe_indices = safe_df.index.tolist()
+        
+        # New Scoring: Utility is secondary to stress and sleep
+        # sleep_probs columns index: 2 is 'Good', 3 is 'Excellent'
+        # stress_probs column index: 2 is 'High'
+        sleep_score = sleep_probs[safe_indices, 2] + sleep_probs[safe_indices, 3]
+        stress_penalty = stress_probs[safe_indices, 2]
+        
+        scores = sleep_score - stress_penalty + (cup_options[safe_indices] * 0.1)
+        
+        best_relative_idx = np.argmax(scores)
+        best_safe_idx = safe_indices[best_relative_idx]
+        best_cups = cup_options[best_safe_idx]
+
+        # Calculate "Impact Probability" - Risk reduction of High Stress
+        current_high_stress_prob = stress_probs[0, 2]
+        new_high_stress_prob = stress_probs[best_safe_idx, 2]
+        prob_reduction = (current_high_stress_prob - new_high_stress_prob) / (current_high_stress_prob + 1e-6)
         
         output = {
             "recommended_cups": float(best_cups),
             "original_intake": float(user_data['Coffee_Intake']),
-            "delta": float(best_cups - user_data['Coffee_Intake']),
-            # Logic for "expected effects"
-            "impact_sleep": "Improvement" if sleep_preds[best_idx] > sleep_preds[0] else "Stable",
-            "impact_stress": "Reduction" if stress_preds[best_idx] < stress_preds[0] else "Stable"
+            "delta": round(float(best_cups - user_data['Coffee_Intake']), 1),
+            "impact_sleep": "Improvement" if sleep_preds[best_safe_idx] > sleep_preds[0] else "Stable",
+            "impact_stress": "Reduction" if stress_preds[best_safe_idx] < stress_preds[0] else "Stable",
+            "stress_reduction_pct": round(max(0, prob_reduction * 100), 1),
+            "reasoning": "This recommendation balances your cardiovascular safety with metabolic data to find a stable intake level."
         }
 
         self._log_event("recommendation_generated", user_data, output)
