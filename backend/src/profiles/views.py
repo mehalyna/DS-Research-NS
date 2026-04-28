@@ -7,5 +7,5 @@ User = get_user_model()
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
-    permission_classes = (AllowAny,) # Open to everyone
+    permission_classes = (AllowAny,)
     serializer_class = UserRegistrationSerializer
