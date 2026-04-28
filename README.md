@@ -42,6 +42,54 @@ This dataset enables exploration of several interesting questions:
 4. **Are there demographic differences in coffee consumption habits?**
 5. **What's the relationship between physical activity and health metrics?**
 
+
+To ensure your README.md is submission-ready for your thesis, I have restructured it to focus on professionalism, reproducibility, and clear deployment instructions.
+
+I have added dedicated sections for Backend/App Launch (addressing your teacher's request for run instructions) and a Reproducibility Checklist.
+
+Improved README.md
+Markdown
+# ☕ Coffee Health Dataset & Persona Analyzer
+
+A comprehensive machine learning and visualization toolkit designed to explore the relationship between caffeine consumption and health metrics. This project includes data analysis scripts, a predictive REST API, and an interactive dashboard.
+
+---
+
+## 🚀 Quick Start: Running the Application
+
+To run the full stack (Frontend + Backend), follow these steps:
+
+### 1. Prerequisites
+Ensure you have **Python 3.10+** and **Docker** installed on your system.
+
+### 2. Backend Setup
+The backend utilizes Django and machine learning models for predictions.
+
+```bash
+# Navigate to the backend directory
+cd backend/
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the development server
+python src/manage.py runserver
+```
+
+### 3. Frontend Dashboard
+The dashboard provides a user-friendly interface for predictive analysis.
+
+```bash
+# Navigate to the frontend directory
+cd frontend/
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch the Streamlit application
+streamlit run src/main.py
+```
+
 ## 🔌 API Documentation
 
 The backend provides RESTful endpoints to interact with the machine learning models. 
