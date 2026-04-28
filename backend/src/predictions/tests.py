@@ -1,8 +1,39 @@
-from rest_framework.test import TestCase, APITestCase, Client
+from django.test import TestCase, Client
+from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
 import json
 
+class CoffeeAITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        # Define a baseline risky payload
+        self.risky_user = {
+            "Age": 70, "BMI": 30.0, "Heart_Rate": 110, 
+            "Coffee_Intake": 4.0, "Caffeine_mg": 380.0,
+            "Sleep_Hours": 4.0, "Physical_Activity_Hours": 1.0,
+            "Gender": "Male", "Occupation": "Office", "Country": "Germany",
+            "Smoking": "No", "Alcohol_Consumption": "No"
+        }
+
+    def test_recommendation_safety_logic(self):
+        """Test that age and heart rate guardrails restrict intake."""
+        url = reverse('recommendation')
+        response = self.client.post(url, data=json.dumps(self.risky_user), content_type='application/json')
+        res_data = response.json()
+        
+        # Guardrail 1: Age > 65 should limit intake to 2.5
+        # Guardrail 2: HR > 100 should limit intake to 0.5
+        # The strictest rule (0.5) should win.
+        self.assertLessEqual(res_data['recommendation']['recommended_cups'], 0.5)
+
+    def test_anomaly_detection_endpoint(self):
+        """Test that extreme data triggers the anomaly flag."""
+        url = reverse('check-anomaly')
+        response = self.client.post(url, data=json.dumps(self.risky_user), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['is_anomaly'])
+        
 class PredictionAPITests(APITestCase):
     
     def setUp(self):

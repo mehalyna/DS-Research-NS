@@ -2,9 +2,13 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class User(AbstractUser):
+    """
+    Custom user model that extends Django's AbstractUser,
+    using email as the primary authentication field.
+    """
     email = models.EmailField(unique=True)
     
-    # Make email the main identifier instead of username
+    # Configure authentication to use email instead of username
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 

@@ -1,0 +1,26 @@
+name: Django CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_DB: coffee_db
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install Dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Run Tests
+        run: python backend/src/manage.py test predictions
