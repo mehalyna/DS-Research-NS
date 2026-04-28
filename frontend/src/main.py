@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import os
+import plotly.graph_objects as go
 
 # --- Configurations ---
 st.set_page_config(page_title="Coffee Persona Analyzer", layout="wide")
@@ -182,25 +183,54 @@ with col2:
                 
                 # 3. Restored, beautiful Plotly Chart
                 if df is not None:
-                    st.subheader("Where you fit in:")
-                    
-                    # Create a simple scatter plot with NO color mapping to avoid errors
+                    # 1. Reset/Prepare the column (Your existing logic)
+                    df['Cluster_str'] = df['Cluster'].astype(str)
+                    color_map = {'0': '#e76f51', '1': '#2a9d8f', '2': '#e9c46a'}
+                    name_map = { '0': 'High','1': 'None (Low)', '2': 'Moderate'}
+                    df['Hex_Color'] = df['Cluster'].astype(str).map(color_map)
+
+                    # 2. Setup Plot (Your existing logic)
                     fig = px.scatter(
                         df, 
                         x='UMAP1', 
                         y='UMAP2', 
                         title="The Global Coffee Personas"
                     )
-                    
-                    # Force all points to be the same professional blue color
-                    fig.update_traces(marker=dict(color='#636efa', size=5, opacity=0.6))
-                    
+
+                    # 3. Apply markers only to the main scatter trace (trace index 0)
+                    fig.data[0].marker.color = df['Hex_Color']
+                    fig.data[0].marker.size = 8
+                    fig.data[0].marker.opacity = 0.8
+
+                    # 4. MANUALLY ADD LEGEND TRACES
+                    # These don't show on the plot, they only show in the legend.
+                    for cluster_id, color in color_map.items():
+                        fig.add_trace(go.Scatter(
+                            x=[None], y=[None], 
+                            mode='markers',
+                            marker=dict(color=color, size=8),
+                            name=name_map[cluster_id],
+                            showlegend=True
+                        ))
+
+                    # 5. Restore the grid and layout
                     fig.update_layout(
                         plot_bgcolor='rgba(0,0,0,0)',
-                        xaxis_title="Similarity Dimension 1",
-                        yaxis_title="Similarity Dimension 2"
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        legend=dict(title="Cluster"),
+                        xaxis=dict(
+                            showgrid=True, gridcolor='lightgrey', 
+                            zeroline=True, zerolinecolor='lightgrey',
+                            showticklabels=False
+                        ),
+                        yaxis=dict(
+                            showgrid=True, gridcolor='lightgrey', 
+                            zeroline=True, zerolinecolor='lightgrey',
+                            showticklabels=False
+                        )
                     )
-                    st.plotly_chart(fig, width='stretch')
+
+                    st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning("Cluster data file not found.")
                 

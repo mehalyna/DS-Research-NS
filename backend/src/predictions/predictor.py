@@ -28,14 +28,14 @@ class CoffeeHealthPredictor:
         
         refined_path = os.path.join(self.models_dir, 'refined')
         
-        self.model_sleep = joblib.load(os.path.join(refined_path, 'lgbm_refined_Sleep_Quality_Num.joblib'))
-        self.model_stress = joblib.load(os.path.join(refined_path, 'lgbm_refined_Stress_Level_Num.joblib'))
-        self.model_health = joblib.load(os.path.join(refined_path, 'lgbm_refined_Health_Issues_Num.joblib'))
-
         self.sleep_map = {0: 'Poor', 1: 'Fair', 2: 'Good', 3: 'Excellent'}
         self.stress_map = {0: 'Low', 1: 'Medium', 2: 'High'}
         self.health_map = {0: 'None', 1: 'Mild', 2: 'Moderate', 3: 'Severe'}
         
+        self.model_sleep = joblib.load(os.path.join(refined_path, 'lgbm_refined_Sleep_Quality_Num.joblib'))
+        self.model_stress = joblib.load(os.path.join(refined_path, 'lgbm_refined_Stress_Level_Num.joblib'))
+        self.model_health = joblib.load(os.path.join(refined_path, 'lgbm_refined_Health_Issues_Num.joblib'))
+
         self.models = {
             'Sleep_Quality': self.model_sleep,
             'Stress_Level': self.model_stress,
@@ -231,7 +231,7 @@ class CoffeeHealthPredictor:
         stress_probs = self.models['Stress_Level'].predict_proba(X_processed)
         
         # 4. Scoring Logic (Matching your Week 13 Notebook)
-        utility_bonus = df_scenarios['Coffee_Intake'] * 0.15
+        utility_bonus = df_scenarios['Coffee_Intake'] * 0.1
         scores = (sleep_preds - stress_preds - health_preds) + utility_bonus
         
         # 5. Safety Guardrails (Rule-based Fallback)
@@ -244,7 +244,7 @@ class CoffeeHealthPredictor:
             
             # 2. The "Nudge" Constraint: Prevent overwhelming the user
             # Don't suggest increasing by more than 1.5 cups from current baseline
-            if row['Coffee_Intake'] > (user_data['Coffee_Intake'] + 1.5):
+            if row['Coffee_Intake'] > (user_data['Coffee_Intake']):
                 return False
             # Don't suggest decreasing by more than 2.0 cups (avoid heavy withdrawal)
             if row['Coffee_Intake'] < (user_data['Coffee_Intake'] - 2.0):
