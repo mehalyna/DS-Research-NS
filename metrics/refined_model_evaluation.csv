@@ -1,0 +1,4 @@
+Target,Accuracy,Precision (Macro),Recall (Macro),F1 (Macro),ROC-AUC (Macro OvR)
+Sleep_Quality_Num,0.9655,0.9555,0.9632,0.9593,0.9988
+Stress_Level_Num,0.979,0.9663,0.9684,0.9673,0.9991
+Health_Issues_Num,0.983,0.9846,0.9383,0.9586,0.9997

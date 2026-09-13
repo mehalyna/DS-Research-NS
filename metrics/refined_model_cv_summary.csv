@@ -1,0 +1,4 @@
+Target,accuracy_mean,accuracy_std,precision_macro_mean,precision_macro_std,recall_macro_mean,recall_macro_std,f1_macro_mean,f1_macro_std,roc_auc_ovr_mean,roc_auc_ovr_std
+Sleep_Quality_Num,0.9725,0.0051,0.9667,0.006,0.9711,0.0062,0.9688,0.0058,0.9994,0.0002
+Stress_Level_Num,0.9799,0.0033,0.9671,0.0065,0.9735,0.0075,0.9702,0.0069,0.9994,0.0001
+Health_Issues_Num,0.9846,0.0019,0.9843,0.0071,0.9595,0.0488,0.9676,0.0331,0.9998,0.0
